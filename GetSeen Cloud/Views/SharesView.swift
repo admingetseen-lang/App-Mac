@@ -90,9 +90,20 @@ struct SharesView: View {
                     if copiedId == share.id { copiedId = nil }
                 }
             } label: {
-                Label(copiedId == share.id ? "Kopiert" : "Link kopieren",
-                      systemImage: copiedId == share.id ? "checkmark" : "doc.on.doc")
-                    .font(.system(size: 12, weight: .medium))
+                HStack(alignment: .center, spacing: 5) {
+                    Image(systemName: copiedId == share.id ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 12, weight: .semibold))
+                    #if os(macOS)
+                    Text(copiedId == share.id ? "Kopiert" : "Link kopieren")
+                        .font(.system(size: 12, weight: .medium))
+                    #else
+                    if copiedId == share.id {
+                        Text("Kopiert").font(.system(size: 12, weight: .medium))
+                    }
+                    #endif
+                }
+                .lineLimit(1)
+                .fixedSize()
             }
             .buttonStyle(SecondaryButtonStyle())
 

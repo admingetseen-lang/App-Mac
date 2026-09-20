@@ -133,7 +133,7 @@ struct SettingsView: View {
                             PlatformOpen.url(URL(string: "https://getseen.cloud/profile.php")!)
                         }
                         Button("Abonnement verwalten") {
-                            PlatformOpen.url(URL(string: "https://getseen.cloud/pricing.php")!)
+                            PlatformOpen.url(URL(string: "https://getseen.cloud/dashboard")!)
                         }
                         Button("Abmelden", role: .destructive) {
                             auth.requestLogout()

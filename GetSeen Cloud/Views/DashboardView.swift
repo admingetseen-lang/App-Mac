@@ -15,8 +15,9 @@ struct DashboardView: View {
     @AppStorage("sortOrder") private var sortOrder: SortOrder = .nameAsc
     @State private var searchText = ""
     @State private var showProfile = false
-    @State private var showDocsEditor = false
-    @State private var docsURL: String = ""
+    /// Docs-Editor-Ziel: als Identifiable-Item, damit der Sheet die URL
+    /// garantiert kennt (bei isPresented+String wurde er mit "" aufgebaut).
+    @State private var docsTarget: DocsTarget? = nil
     @State private var previewItem: CloudItem?
     @State private var renameItem: CloudItem?
     @State private var renameText = ""
@@ -91,9 +92,9 @@ struct DashboardView: View {
         .sheet(item: $previewItem) { item in
             FilePreviewSheet(item: item, fileStore: fileStore)
         }
-        .sheet(isPresented: $showDocsEditor) {
-            DocsEditorWindow(url: docsURL, onClose: {
-                showDocsEditor = false
+        .sheet(item: $docsTarget) { target in
+            DocsEditorWindow(url: target.url, onClose: {
+                docsTarget = nil
                 Task { await reload() }
             })
         }
@@ -1292,16 +1293,15 @@ struct DashboardView: View {
     }
 
     private func openNewDoc() {
-        docsURL = "https://getseen.cloud/docs?new=1"
+        var url = "https://getseen.cloud/docs?new=1"
         if let pid = currentParentId {
-            docsURL += "&parent_id=\(pid)"
+            url += "&parent_id=\(pid)"
         }
-        showDocsEditor = true
+        docsTarget = DocsTarget(url: url)
     }
 
     private func openInEditor(_ item: CloudItem) {
-        docsURL = "https://getseen.cloud/docs?id=\(item.id)"
-        showDocsEditor = true
+        docsTarget = DocsTarget(url: "https://getseen.cloud/docs?id=\(item.id)")
     }
 
     private func startRename(_ item: CloudItem) {
@@ -1990,4 +1990,11 @@ struct GridFolderDropDelegate: DropDelegate {
         }
         return true
     }
+}
+
+
+/// Ziel für den Docs-Editor-Sheet (Identifiable, damit `.sheet(item:)` die URL mitnimmt)
+struct DocsTarget: Identifiable, Equatable {
+    let url: String
+    var id: String { url }
 }

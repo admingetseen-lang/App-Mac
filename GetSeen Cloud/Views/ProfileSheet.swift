@@ -378,7 +378,7 @@ struct ProfileSheet: View {
                 label: user.plan.lowercased() == "free" ? "Auf Premium upgraden" : "Plan verwalten",
                 trailing: AnyView(Image(systemName: "arrow.up.right").foregroundColor(.secondary).font(.system(size: 10)))
             ) {
-                if let url = URL(string: "https://getseen.cloud/pricing.php") {
+                if let url = URL(string: "https://getseen.cloud/dashboard") {
                     PlatformOpen.url(url)
                 }
             }
