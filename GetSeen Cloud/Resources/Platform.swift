@@ -96,13 +96,10 @@ enum AppGroupBridge {
     /// Stabile Kennung der Finder-Domäne.
     static let domainRawId = "GetSeenCloudFiles"
 
-    /// Bundle-ID der File-Provider-Extension (deren Sandbox-Container die App
-    /// als verlässlichen Austauschort nutzt).
-    private static let fpExtBundleID = "GetSeen-Cloud.App-Mac.FileProviderExt"
-    private static var extSessionURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Containers/\(fpExtBundleID)/Data/session.json")
-    }
+    /// Gemeinsamer App-Group-Container. Unter App Sandbox (Pflicht für den
+    /// Mac App Store) ist das der EINZIG erlaubte Austauschort zwischen App und
+    /// File-Provider-Extension — und er funktioniert zuverlässig, sobald BEIDE
+    /// Targets sandboxed sind (dann bekommen beide denselben Container-Pfad).
     private static var groupSessionURL: URL? {
         FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: groupId)?
@@ -111,16 +108,11 @@ enum AppGroupBridge {
 
     private static func writeSession(baseURL: String, cookieHeader: String) {
         let dict = ["baseURL": baseURL, "cookieHeader": cookieHeader]
-        guard let data = try? JSONSerialization.data(withJSONObject: dict) else { return }
-        // 1) In den Container der Extension schreiben — das ist der verlässliche
-        //    Kanal (App darf als non-sandboxed dorthin schreiben, Extension liest
-        //    ihn als ihr eigenes Zuhause). Umgeht das kaputte Group-Sharing.
-        let extURL = extSessionURL
+        guard let data = try? JSONSerialization.data(withJSONObject: dict),
+              let url = groupSessionURL else { return }
         try? FileManager.default.createDirectory(
-            at: extURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? data.write(to: extURL, options: .atomic)
-        // 2) Zusätzlich in den Group-Container (Fallback).
-        if let g = groupSessionURL { try? data.write(to: g, options: .atomic) }
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
     }
 
 

@@ -205,11 +205,18 @@ final class FileStore: ObservableObject {
     // MARK: - Upload
     /// Upload mit Fortschrittsanzeige + Abbrechen (feuert und verwaltet sich selbst).
     func upload(url: URL, parentId: String?) {
+        // App Sandbox: Eine von außen (Finder-Drop, Datei-Dialog) übergebene URL
+        // darf nur gelesen werden, solange ihr Security-Scope geöffnet ist.
+        // Hier zentral öffnen, damit ALLE Upload-Wege abgedeckt sind. Für
+        // Dateien, die keinen Scope brauchen, liefert der Aufruf false und
+        // wir lassen den Scope einfach unangetastet.
+        let scoped = url.startAccessingSecurityScopedResource()
         let name = url.lastPathComponent
         let size = ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? NSNumber)?.int64Value ?? 0
         var task: Task<Void, Never>?
         let id = TransferManager.shared.start(name: name, isUpload: true, totalBytes: size) { task?.cancel() }
         task = Task { [weak self] in
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
                 _ = try await APIService.shared.upload(fileURL: url, parentId: parentId) { p in
                     Task { @MainActor in TransferManager.shared.progress(id, p) }

@@ -21,3 +21,7 @@ DerivedData/
 # Lokale Backups (nicht ins Repo)
 _backup_logo_original/
 Claude outputs/
+
+# Sicherungskopien von Projektdateien
+*.bak_fp
+*.bak
