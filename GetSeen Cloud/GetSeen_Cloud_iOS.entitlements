@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  iOS/iPadOS-Entitlements. Absichtlich minimal:
+	  - iOS erzwingt die Sandbox automatisch (kein app-sandbox-Schlüssel nötig).
+	  - Netzwerkzugriff ist auf iOS standardmäßig erlaubt.
+	  - Datei-Export läuft über Share-Sheet / Dokumenten-Picker (kein Entitlement nötig).
+	  Hier nur ergänzen, wenn echte Capabilities dazukommen (z. B. Push, iCloud).
+	-->
+</dict>
+</plist>

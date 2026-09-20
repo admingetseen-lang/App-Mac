@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Xcode – persönliche Einstellungen / Zustand (nicht ins Repo)
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+**/xcshareddata/WorkspaceSettings.xcsettings
+
+# Build-Artefakte
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Lokale Backups (nicht ins Repo)
+_backup_logo_original/
+Claude outputs/
