@@ -370,16 +370,20 @@ struct ProfileSheet: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
 
-            Divider().padding(.leading, 44)
+            // App-Store-Richtlinie 3.1.3(f): keine Kaufaufforderung in der App.
+            // Nur bestehende Abonnenten bekommen den Verwaltungs-Link.
+            if user.plan.lowercased() != "free" {
+                Divider().padding(.leading, 44)
 
-            actionRow(
-                icon: "arrow.up.right.circle.fill",
-                color: Theme.purple,
-                label: user.plan.lowercased() == "free" ? "Auf Premium upgraden" : "Plan verwalten",
-                trailing: AnyView(Image(systemName: "arrow.up.right").foregroundColor(.secondary).font(.system(size: 10)))
-            ) {
-                if let url = URL(string: "https://getseen.cloud/dashboard") {
-                    PlatformOpen.url(url)
+                actionRow(
+                    icon: "arrow.up.right.circle.fill",
+                    color: Theme.purple,
+                    label: "Plan verwalten",
+                    trailing: AnyView(Image(systemName: "arrow.up.right").foregroundColor(.secondary).font(.system(size: 10)))
+                ) {
+                    if let url = URL(string: "https://getseen.cloud/dashboard") {
+                        PlatformOpen.url(url)
+                    }
                 }
             }
         }

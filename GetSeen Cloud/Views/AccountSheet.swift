@@ -79,7 +79,7 @@ struct AccountSheet: View {
             if (sub?.hasSubscription ?? false) && (sub?.status == "active") {
                 HStack(spacing: 10) {
                     Button {
-                        if let u = URL(string: "https://getseen.cloud/stripe_portal.php") { openURL(u) }
+                        if let u = URL(string: "https://getseen.cloud/dashboard") { openURL(u) }
                     } label: { Text("Im Browser verwalten").font(.system(size: 12, weight: .medium)) }
                         .buttonStyle(SecondaryButtonStyle())
                     Button {
@@ -92,7 +92,7 @@ struct AccountSheet: View {
                     .disabled(cancelling)
                 }
             } else {
-                Text("Kein aktives Abo. Upgrade über die Website unter „Plan wählen“.")
+                Text("Kein aktives Abo – du nutzt den kostenlosen Plan.")
                     .font(.system(size: 12)).foregroundColor(.secondary)
             }
         }

@@ -163,7 +163,7 @@ struct LoginView: View {
                 // Footer-Links
                 HStack(spacing: 16) {
                     Button("Passwort vergessen?") {
-                        if let url = URL(string: "https://getseen.cloud/forgot.php") {
+                        if let url = URL(string: "https://getseen.cloud/forgot-password") {
                             PlatformOpen.url(url)
                         }
                     }
