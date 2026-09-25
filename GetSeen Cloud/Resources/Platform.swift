@@ -173,3 +173,18 @@ enum AppGroupBridge {
     static func signalChange() {}
     #endif
 }
+
+
+// MARK: - Sheet-Kopfzeilen auf iOS
+extension View {
+    /// Zusätzlicher oberer Abstand für Kopfzeilen in Sheets auf iPhone/iPad:
+    /// Drag-Indicator und abgerundete Ecken des Sheets schneiden sonst
+    /// Icons und Schließen-Kreuz am Rand an. Auf macOS ohne Wirkung.
+    func sheetHeaderInset() -> some View {
+        #if os(iOS)
+        return self.padding(.top, 14)
+        #else
+        return self
+        #endif
+    }
+}

@@ -58,6 +58,7 @@ struct FilePreviewSheet: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
+            .sheetHeaderInset()
             .background(Color.platformWindowBackground)
             #if os(iOS)
             .sheet(item: $previewExport) { export in ShareSheet(items: [export.url]) }

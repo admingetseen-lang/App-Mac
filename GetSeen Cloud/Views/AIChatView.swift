@@ -58,6 +58,7 @@ struct AIChatView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+            .sheetHeaderInset()
             .background(Color.platformWindowBackground)
 
             Divider().opacity(0.5)
@@ -152,7 +153,12 @@ struct AIChatView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
         }
+        #if os(macOS)
         .frame(minWidth: 420, idealWidth: 480, minHeight: 500, idealHeight: 600)
+        #else
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        #endif
         .onAppear { inputFocused = true }
     }
 

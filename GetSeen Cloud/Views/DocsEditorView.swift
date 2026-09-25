@@ -73,6 +73,7 @@ struct DocsEditorWindow: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
+            .sheetHeaderInset()
             .background(Color.platformWindowBackground)
 
             Divider()
