@@ -1,0 +1,9 @@
+{
+  "id" : "b80a0edc-7ca5-48ca-87fb-0d0403f4e40a",
+  "targets" : [
+    {
+      "id" : "85572A9A-AD3B-4836-89C6-A9D9517077F4",
+      "name" : "GetSeen Cloud"
+    }
+  ]
+}

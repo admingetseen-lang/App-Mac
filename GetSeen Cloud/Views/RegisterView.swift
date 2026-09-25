@@ -447,6 +447,11 @@ struct RegisterSuccessView: View {
     let email: String
     let onBackToLogin: () -> Void
 
+    @State private var resendState: ResendState = .idle
+    @State private var cooldown: Int = 0
+
+    private enum ResendState: Equatable { case idle, sending, sent, failed(String) }
+
     var body: some View {
         VStack(spacing: 18) {
             checkIcon
@@ -456,6 +461,7 @@ struct RegisterSuccessView: View {
                 .multilineTextAlignment(.center)
             emailBlock
             spamHint
+            resendButton
             backButton
         }
         .padding(36)
@@ -509,6 +515,83 @@ struct RegisterSuccessView: View {
         .padding(12)
         .background(Color.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 9))
+    }
+
+    // MARK: Bestätigungs-E-Mail erneut senden (gleicher Endpunkt wie die Website)
+    private var resendButton: some View {
+        VStack(spacing: 6) {
+            Button {
+                Task { await resend() }
+            } label: {
+                HStack(spacing: 6) {
+                    if resendState == .sending {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    Text(cooldown > 0 ? "Erneut in \(cooldown)s möglich" : "E-Mail erneut senden")
+                }
+                .font(.system(size: 12, weight: .medium))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(Color.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 9))
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.white.opacity(cooldown > 0 ? 0.4 : 0.9))
+            .disabled(resendState == .sending || cooldown > 0)
+
+            switch resendState {
+            case .sent:
+                Text("✓ Neue Bestätigungs-E-Mail gesendet")
+                    .font(.system(size: 11)).foregroundColor(.green)
+            case .failed(let msg):
+                Text(msg)
+                    .font(.system(size: 11)).foregroundColor(.orange)
+                    .multilineTextAlignment(.center)
+            default:
+                EmptyView()
+            }
+        }
+    }
+
+    private func resend() async {
+        resendState = .sending
+        guard let url = URL(string: "https://getseen.cloud/resend-verification.php") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        let boundary = "----GetSeen\(UUID().uuidString)"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        var body = Data()
+        body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"email\"\r\n\r\n\(email)\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+        do {
+            let (data, _) = try await APIService.shared.session.data(for: req)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if (json["ok"] as? Bool) == true || (json["ok"] as? Int) == 1 {
+                    resendState = .sent
+                    startCooldown(json["cooldown"] as? Int ?? 60)
+                    return
+                }
+                let msg = (json["error"] as? String) ?? (json["message"] as? String) ?? "Senden fehlgeschlagen."
+                resendState = .failed(msg)
+                if let cd = json["cooldown"] as? Int { startCooldown(cd) }
+                return
+            }
+            resendState = .failed("Senden fehlgeschlagen.")
+        } catch {
+            resendState = .failed("Verbindungsfehler: \(error.localizedDescription)")
+        }
+    }
+
+    private func startCooldown(_ seconds: Int) {
+        cooldown = seconds
+        Task {
+            while cooldown > 0 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                cooldown -= 1
+            }
+        }
     }
 
     private var backButton: some View {
