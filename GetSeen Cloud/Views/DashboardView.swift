@@ -717,7 +717,7 @@ struct DashboardView: View {
                 performUpload: { urls in
                     isDragOver = false
                     Task {
-                        for url in urls { fileStore.upload(url: url, parentId: currentParentId) }
+                        for url in urls { fileStore.upload(url: url, parentId: currentParentId, inVault: selectedSection == .vault) }
                         await reload()
                         await MainActor.run { isDragOver = false }
                     }
@@ -1192,7 +1192,7 @@ struct DashboardView: View {
         case .myFiles: await fileStore.loadList(parentId: currentParentId)
         case .favorites: await fileStore.loadFavorites()
         case .shared: await fileStore.loadShared()
-        case .vault: await fileStore.loadVault()
+        case .vault: await fileStore.loadVault(parentId: currentParentId)
         case .trash: await fileStore.loadTrash()
         }
         // Cleanup nach Reload — stale Selection und Rubber-Band-State entfernen
@@ -1409,7 +1409,7 @@ struct DashboardView: View {
                     let name = newFolderName.trimmingCharacters(in: .whitespaces)
                     guard !name.isEmpty else { return }
                     Task {
-                        await fileStore.createFolder(name: name, parentId: currentParentId)
+                        await fileStore.createFolder(name: name, parentId: currentParentId, inVault: selectedSection == .vault)
                         showNewFolder = false
                         newFolderName = ""
                         await reload()
@@ -1482,7 +1482,7 @@ struct DashboardView: View {
         group.notify(queue: .main) {
             Task {
                 for url in urls {
-                    fileStore.upload(url: url, parentId: currentParentId)
+                    fileStore.upload(url: url, parentId: currentParentId, inVault: selectedSection == .vault)
                 }
                 await reload()
             }
@@ -1496,7 +1496,7 @@ struct DashboardView: View {
                 for url in urls {
                     let access = url.startAccessingSecurityScopedResource()
                     defer { if access { url.stopAccessingSecurityScopedResource() } }
-                    fileStore.upload(url: url, parentId: currentParentId)
+                    fileStore.upload(url: url, parentId: currentParentId, inVault: selectedSection == .vault)
                 }
                 await reload()
             }

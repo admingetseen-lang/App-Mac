@@ -151,7 +151,7 @@ final class APIService {
     }
 
     // MARK: - Multipart Upload (für Dateien)
-    func upload(fileURL: URL, parentId: String? = nil, replaceId: String? = nil,
+    func upload(fileURL: URL, parentId: String? = nil, replaceId: String? = nil, inVault: Bool = false,
                 progress: ((Double) -> Void)? = nil) async throws -> [String: Any] {
         // Direkt an die kanonische URL OHNE ".php": Der Server leitet
         // api.php -> api per 301 um und verwirft dabei den POST-Body ("No file").
@@ -178,6 +178,12 @@ final class APIService {
         var header = "--\(boundary)\(lineBreak)"
         header += "Content-Disposition: form-data; name=\"parent_id\"\(lineBreak)\(lineBreak)"
         header += "\(parentId ?? "")\(lineBreak)"
+        if inVault {
+            // Tresor-Wurzel: Backend braucht is_vault=1, sonst landet die Datei in "Meine Dateien"
+            header += "--\(boundary)\(lineBreak)"
+            header += "Content-Disposition: form-data; name=\"is_vault\"\(lineBreak)\(lineBreak)"
+            header += "1\(lineBreak)"
+        }
         if let replaceId = replaceId {
             header += "--\(boundary)\(lineBreak)"
             header += "Content-Disposition: form-data; name=\"replace_id\"\(lineBreak)\(lineBreak)"

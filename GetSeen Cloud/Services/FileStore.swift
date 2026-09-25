@@ -91,11 +91,13 @@ final class FileStore: ObservableObject {
         catch { handle(error) }
     }
 
-    func loadVault() async {
+    func loadVault(parentId: String? = nil) async {
         isLoading = true
         defer { isLoading = false }
         do {
-            let json = try await APIService.shared.get("vault_list")
+            var params: [String: String] = [:]
+            if let pid = parentId { params["parent_id"] = pid }   // Unterordner im Tresor
+            let json = try await APIService.shared.get("vault_list", params: params)
             if let arr = json["items"] as? [[String: Any]] {
                 items = arr.map { CloudItem.from(dict: $0) }
                     .sorted(by: sortItems)
@@ -135,10 +137,12 @@ final class FileStore: ObservableObject {
     }
 
     // MARK: - Folder
-    func createFolder(name: String, parentId: String?) async {
+    func createFolder(name: String, parentId: String?, inVault: Bool = false) async {
         do {
             var params: [String: String] = ["name": name]
             if let pid = parentId { params["parent_id"] = pid }
+            // Tresor-Wurzel (kein parent): Backend braucht is_vault=1, sonst normaler Ordner
+            if inVault && parentId == nil { params["is_vault"] = "1" }
             #if DEBUG
             print("📁 createFolder: name='\(name)', parentId=\(parentId ?? "<root>")")
             #endif
@@ -204,7 +208,7 @@ final class FileStore: ObservableObject {
 
     // MARK: - Upload
     /// Upload mit Fortschrittsanzeige + Abbrechen (feuert und verwaltet sich selbst).
-    func upload(url: URL, parentId: String?) {
+    func upload(url: URL, parentId: String?, inVault: Bool = false) {
         // App Sandbox: Eine von außen (Finder-Drop, Datei-Dialog) übergebene URL
         // darf nur gelesen werden, solange ihr Security-Scope geöffnet ist.
         // Hier zentral öffnen, damit ALLE Upload-Wege abgedeckt sind. Für
@@ -218,7 +222,7 @@ final class FileStore: ObservableObject {
         task = Task { [weak self] in
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
-                _ = try await APIService.shared.upload(fileURL: url, parentId: parentId) { p in
+                _ = try await APIService.shared.upload(fileURL: url, parentId: parentId, inVault: inVault && parentId == nil) { p in
                     Task { @MainActor in TransferManager.shared.progress(id, p) }
                 }
                 TransferManager.shared.finish(id, .done)
