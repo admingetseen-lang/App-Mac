@@ -104,6 +104,10 @@ struct GetSeenCloudApp: App {
                     auth.restoreSession()
                     notif.requestPermission()
                 }
+                .onOpenURL { url in
+                    // Bestätigungslink aus der E-Mail (Universal Link) oder getseencloud://verify?token=…
+                    _ = auth.handleIncomingURL(url)
+                }
         }
         #if os(macOS)
         .windowStyle(.titleBar)

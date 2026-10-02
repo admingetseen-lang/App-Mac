@@ -106,6 +106,64 @@ final class AuthManager: ObservableObject {
         }
     }
 
+    // MARK: - E-Mail-Bestätigung per Link (Universal Link / getseencloud://)
+    /// Nimmt eine eingehende URL entgegen und loggt bei einem gültigen
+    /// Bestätigungs-Token direkt ein – ohne erneute Passworteingabe.
+    ///   https://getseen.cloud/verify-email?token=…   (Universal Link aus der Mail)
+    ///   getseencloud://verify?token=…                (Button auf der Bestätigungsseite)
+    @discardableResult
+    func handleIncomingURL(_ url: URL) -> Bool {
+        let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let path = (url.scheme == "getseencloud") ? (url.host ?? "") : url.path
+        guard path.contains("verify"),
+              let token = comps?.queryItems?.first(where: { $0.name == "token" })?.value,
+              !token.isEmpty else { return false }
+        Task { await loginWithVerifyToken(token) }
+        return true
+    }
+
+    func loginWithVerifyToken(_ token: String) async {
+        guard !isLoading else { return }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        guard let url = URL(string: "https://www.getseen.cloud/app-verify.php") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue("GetSeenCloud-App/1.0", forHTTPHeaderField: "User-Agent")
+        req.setValue("1", forHTTPHeaderField: "X-GetSeen-App")
+        req.httpShouldHandleCookies = true
+        req.httpBody = "token=\(encode(token))".data(using: .utf8)
+
+        do {
+            let keeper = RedirectPreservingDelegate(method: "POST", body: req.httpBody, contentType: "application/x-www-form-urlencoded")
+            let (data, _) = try await APIService.shared.session.data(for: req, delegate: keeper)
+            let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            if (json["ok"] as? Bool) == true {
+                needs2FA = false
+                pendingEmail = nil
+                await fetchProfile()
+                if currentUser != nil {
+                    isAuthenticated = true
+                    NotificationManager.shared.postLocal(title: "E-Mail bestätigt", body: "Willkommen bei GetSeen Cloud!")
+                } else {
+                    errorMessage = "E-Mail bestätigt – bitte melde dich jetzt an."
+                }
+                return
+            }
+            switch (json["code"] as? String) ?? "" {
+            case "already_verified": errorMessage = "Deine E-Mail ist bereits bestätigt – bitte melde dich an."
+            case "expired":          errorMessage = "Der Bestätigungslink ist abgelaufen. Fordere in der App eine neue E-Mail an."
+            default:                 errorMessage = (json["error"] as? String) ?? "Bestätigungslink ungültig."
+            }
+        } catch {
+            errorMessage = "Verbindungsfehler: \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - 2FA-Code submitten
     func verify2FA(code: String) async {
         guard !isLoading else { return }   // A-11: keine doppelte Absendung

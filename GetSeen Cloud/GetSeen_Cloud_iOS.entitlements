@@ -9,5 +9,10 @@
 	  - Datei-Export läuft über Share-Sheet / Dokumenten-Picker (kein Entitlement nötig).
 	  Hier nur ergänzen, wenn echte Capabilities dazukommen (z. B. Push, iCloud).
 	-->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:getseen.cloud</string>
+		<string>applinks:www.getseen.cloud</string>
+	</array>
 </dict>
 </plist>

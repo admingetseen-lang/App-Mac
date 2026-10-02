@@ -253,55 +253,50 @@ struct RegisterView: View {
     }
 
     private func registerOnServer() async -> RegisterResult {
-        guard let url = URL(string: "https://getseen.cloud/register") else {
+        // JSON-Endpunkt für die App (app-register.php) – kein HTML-Scraping mehr.
+        guard let url = URL(string: "https://getseen.cloud/app-register") else {
             return .networkError("Ungültige URL")
         }
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        req.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15", forHTTPHeaderField: "User-Agent")
-        req.setValue("https://getseen.cloud/register", forHTTPHeaderField: "Referer")
-        req.setValue("https://getseen.cloud", forHTTPHeaderField: "Origin")
-        req.httpShouldHandleCookies = true
+        req.setValue("application/x-www-form-urlencoded; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue("1", forHTTPHeaderField: "X-GetSeen-App")
+        req.timeoutInterval = 30
 
         func enc(_ s: String) -> String {
-            s.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? s
+            var allowed = CharacterSet.urlQueryAllowed
+            allowed.remove(charactersIn: "+&=?/:@;,$")
+            return s.addingPercentEncoding(withAllowedCharacters: allowed) ?? s
         }
 
-        let bodyParts = [
+        let body = [
             "email=\(enc(email))",
             "password=\(enc(password))",
             "password2=\(enc(password2))",
             "privacy=1",
             "agb=1"
-        ]
-        let body = bodyParts.joined(separator: "&")
+        ].joined(separator: "&")
         req.httpBody = body.data(using: .utf8)
-        req.setValue(String(body.utf8.count), forHTTPHeaderField: "Content-Length")
 
         do {
-            let (data, _) = try await APIService.shared.session.data(for: req)
-            let html = String(data: data, encoding: .utf8) ?? ""
-            let lower = html.lowercased()
-
-            if lower.contains("registrierung fast abgeschlossen")
-                || lower.contains("bestätigungs-e-mail") {
+            let (data, response) = try await APIService.shared.session.data(for: req)
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                return .networkError("Unerwartete Antwort vom Server (\(status)).")
+            }
+            if (json["ok"] as? Bool) == true {
                 return .success
             }
-            if lower.contains("bereits registriert") {
-                return .alreadyExists
+            let code = (json["code"] as? String) ?? ""
+            let message = (json["error"] as? String) ?? "Registrierung fehlgeschlagen."
+            switch code {
+            case "rate_limited", "server_error", "forbidden", "method":
+                return .networkError(message)
+            default:
+                return .invalidData(message)
             }
-            if lower.contains("mindestens 8 zeichen") {
-                return .invalidData("Passwort muss mindestens 8 Zeichen haben.")
-            }
-            if lower.contains("stimmen nicht überein") {
-                return .invalidData("Passwörter stimmen nicht überein.")
-            }
-            if lower.contains("gültige e-mail") {
-                return .invalidData("Bitte eine gültige E-Mail eingeben.")
-            }
-            return .invalidData("Registrierung fehlgeschlagen.")
         } catch {
             return .networkError(error.localizedDescription)
         }
@@ -557,7 +552,7 @@ struct RegisterSuccessView: View {
 
     private func resend() async {
         resendState = .sending
-        guard let url = URL(string: "https://getseen.cloud/resend-verification.php") else { return }
+        guard let url = URL(string: "https://getseen.cloud/resend-verification") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         let boundary = "----GetSeen\(UUID().uuidString)"
