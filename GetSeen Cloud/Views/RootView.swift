@@ -28,5 +28,12 @@ struct RootView: View {
         } message: {
             Text("Du wirst aus GetSeen Cloud abgemeldet.")
         }
+        .alert("E-Mail-Bestätigung",
+               isPresented: Binding(get: { auth.verifyAlertMessage != nil },
+                                    set: { if !$0 { auth.verifyAlertMessage = nil } })) {
+            Button("OK") { auth.verifyAlertMessage = nil }
+        } message: {
+            Text(auth.verifyAlertMessage ?? "")
+        }
     }
 }

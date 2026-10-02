@@ -122,13 +122,24 @@ final class AuthManager: ObservableObject {
         return true
     }
 
+    @Published var verifyAlertMessage: String?   // wird in RootView als Alert angezeigt
+
     func loginWithVerifyToken(_ token: String) async {
-        guard !isLoading else { return }
+        guard !verifyLoginInProgress else { return }
+        verifyLoginInProgress = true
+        defer { verifyLoginInProgress = false }
+
+        // Erst die Session-Wiederherstellung vom App-Start abwarten – sonst kann deren
+        // Antwort (leere Session) das Login-Cookie dieses Aufrufs überschreiben.
+        await restoreTask?.value
+        if isAuthenticated { return }
+
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
-        guard let url = URL(string: "https://www.getseen.cloud/app-verify.php") else { return }
+        // Ohne .php: der Server leitet *.php um, so sparen wir den Redirect komplett
+        guard let url = URL(string: "https://www.getseen.cloud/app-verify") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -150,17 +161,21 @@ final class AuthManager: ObservableObject {
                     isAuthenticated = true
                     NotificationManager.shared.postLocal(title: "E-Mail bestätigt", body: "Willkommen bei GetSeen Cloud!")
                 } else {
-                    errorMessage = "E-Mail bestätigt – bitte melde dich jetzt an."
+                    verifyAlertMessage = "Deine E-Mail ist bestätigt. Bitte melde dich jetzt mit deinem Passwort an."
                 }
                 return
             }
-            switch (json["code"] as? String) ?? "" {
-            case "already_verified": errorMessage = "Deine E-Mail ist bereits bestätigt – bitte melde dich an."
-            case "expired":          errorMessage = "Der Bestätigungslink ist abgelaufen. Fordere in der App eine neue E-Mail an."
-            default:                 errorMessage = (json["error"] as? String) ?? "Bestätigungslink ungültig."
+            let code = (json["code"] as? String) ?? ""
+            #if DEBUG
+            print("🔗 app-verify → code=\(code) error=\(json["error"] as? String ?? "-")")
+            #endif
+            switch code {
+            case "already_verified": verifyAlertMessage = "Deine E-Mail ist bereits bestätigt – bitte melde dich an."
+            case "expired":          verifyAlertMessage = "Der Bestätigungslink ist abgelaufen. Fordere in der App eine neue E-Mail an."
+            default:                 verifyAlertMessage = (json["error"] as? String) ?? "Bestätigungslink ungültig."
             }
         } catch {
-            errorMessage = "Verbindungsfehler: \(error.localizedDescription)"
+            verifyAlertMessage = "Verbindungsfehler: \(error.localizedDescription)"
         }
     }
 
@@ -284,8 +299,14 @@ final class AuthManager: ObservableObject {
     }
 
     // MARK: - Session beim App-Start prüfen
+    /// Laufende Session-Wiederherstellung (damit ein Token-Login darauf warten kann
+    /// und das leere Session-Cookie von profile_get den Login nicht überschreibt).
+    private var restoreTask: Task<Void, Never>?
+    private var verifyLoginInProgress = false
+
     func restoreSession() {
-        Task {
+        guard !verifyLoginInProgress else { return }
+        restoreTask = Task {
             await fetchProfile()
             if currentUser != nil { isAuthenticated = true }
         }
