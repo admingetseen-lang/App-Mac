@@ -16,6 +16,7 @@ struct RegisterView: View {
     @State private var showPassword = false
     @State private var privacyAccepted = false
     @State private var agbAccepted = false
+    @State private var newsletterAccepted = false   // optional, DSGVO: Double-Opt-in serverseitig
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var successEmail: String?
@@ -157,6 +158,7 @@ struct RegisterView: View {
         VStack(alignment: .leading, spacing: 8) {
             CheckboxRow(isOn: $privacyAccepted, prefix: "Ich stimme der", linkText: "Datenschutzerklärung", suffix: "zu.", url: "https://getseen.cloud/datenschutz")
             CheckboxRow(isOn: $agbAccepted, prefix: "Ich stimme den", linkText: "AGB", suffix: "zu.", url: "https://getseen.cloud/agb")
+            CheckboxRow(isOn: $newsletterAccepted, prefix: "Optional: Newsletter zu Updates & Angeboten –", linkText: "Details", suffix: "", url: "https://getseen.cloud/datenschutz#newsletter")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -276,7 +278,8 @@ struct RegisterView: View {
             "password=\(enc(password))",
             "password2=\(enc(password2))",
             "privacy=1",
-            "agb=1"
+            "agb=1",
+            "newsletter=\(newsletterAccepted ? 1 : 0)"
         ].joined(separator: "&")
         req.httpBody = body.data(using: .utf8)
 
